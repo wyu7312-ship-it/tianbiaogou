@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>zhiye/phoenix 类 ATS 布局仿真（旁支兄弟标签）</title>
+<style>
+  body{font:14px "Microsoft YaHei";max-width:760px;margin:20px auto;color:#233}
+  h2{font-size:16px} .panel{border:1px solid #e3e6ea;border-radius:8px;padding:14px;margin:12px 0}
+  .line{display:flex;margin-bottom:12px}
+  .label{width:120px;text-align:right;padding-right:12px;color:#556;line-height:32px;flex-shrink:0}
+  .label i{color:#d33;font-style:normal}
+  .ctrl{flex:1}
+  input,select{width:300px;padding:6px;border:1px solid #cfd6dd;border-radius:4px}
+  .hint{color:#98a2b3;font-size:12px;margin-left:8px}
+  .group{margin:16px 0 6px;font-weight:700;color:#2f5d8a}
+  fieldset{border:1px solid #e3e6ea;border-radius:6px;padding:12px}
+  legend{font-weight:700;color:#2f5d8a;padding:0 6px}
+  .wrap-label label{color:#556}
+  .badge{background:#eef4ff;color:#2f5d8a;border-radius:3px;padding:1px 5px;font-size:12px;margin-left:6px}
+</style>
+</head>
+<body>
+<h2>ATS 类布局仿真 —— 覆盖旁支兄弟标签的各种变体</h2>
+<p class="hint">目标：验证 haystack 能否取到真标签，而非占位符「请输入」。</p>
+
+<div class="panel">
+  <div class="group">A. 标准旁支：label 与控件容器并列（你修复的目标形态）</div>
+
+  <!-- A1: 紧凑写法 .label + .ctrl（无空格） -->
+  <div class="line"><div class="label">姓名<i>*</i></div><div class="ctrl"><input id="a1" placeholder="请输入"></div></div>
+  <!-- A2: label 内含 <span> 子元素 -->
+  <div class="line"><div class="label"><span>手机</span><span>号码</span><i>*</i></div><div class="ctrl"><input id="a2" placeholder="请输入"></div></div>
+  <!-- A3: 标签通过 .label 的兄弟再上一级 -->
+  <div class="line"><div class="label">毕业院校</div><div class="ctrl"><div class="inner"><input id="a3" placeholder="请输入"></div></div></div>
+  <!-- A4: 标签文字过长（>12 字） -->
+  <div class="line"><div class="label">是否服从调剂（请慎重选择并确认）</div><div class="ctrl"><input id="a4" placeholder="请输入"></div></div>
+</div>
+
+<div class="panel">
+  <div class="group">B. 危险形态：label 自身/内部含输入控件</div>
+
+  <!-- B1: label 就是控件本身（合法写法，应取该 label 文本） -->
+  <div class="line"><div class="ctrl"><label class="wrap-label">身份证号码 <input id="b1" placeholder="请输入"></label></div></div>
+  <!-- B2: 旁支兄弟内部含"另一个"控件的搜索框体 -->
+  <div class="line"><div class="label">政治面貌<i>*</i><input type="hidden" id="b2h"></div><div class="ctrl"><input id="b2" placeholder="请输入"></div></div>
+  <!-- B3: label 内含 select（学校选择器） -->
+  <div class="line"><div class="label">所学专业<select id="b3s"><option></option></select></div><div class="ctrl"><input id="b3" placeholder="请输入"></div></div>
+</div>
+
+<div class="panel">
+  <div class="group">C. 干扰形态：错误提示 / 计数 / 徽标抢位</div>
+
+  <!-- C1: 控件前有错误提示 -->
+  <div class="line"><div class="label">电子邮箱</div><div class="ctrl"><div class="err">邮箱格式不正确</div><input id="c1" placeholder="请输入"></div></div>
+  <!-- C2: 标签后紧跟必填徽标 -->
+  <div class="line"><div class="label">紧急联系人电话<span class="badge">必填</span></div><div class="ctrl"><input id="c2" placeholder="请输入"></div></div>
+  <!-- C3: 纯计数/单位标签 -->
+  <div class="line"><div class="label">0/200</div><div class="ctrl"><textarea id="c3" placeholder="请输入"></textarea></div></div>
+</div>
+
+<div class="panel">
+  <div class="group">D. fieldset/legend 分组（人称 scope 场景）</div>
+  <fieldset>
+    <legend>家庭主要成员</legend>
+    <div class="line"><div class="label">姓名</div><div class="ctrl"><input id="d1" placeholder="请输入"></div></div>
+    <div class="line"><div class="label">关系</div><div class="ctrl"><input id="d2" placeholder="请输入"></div></div>
+    <div class="line"><div class="label">联系电话</div><div class="ctrl"><input id="d3" placeholder="请输入"></div></div>
+  </fieldset>
+  <fieldset>
+    <legend>教育经历</legend>
+    <div class="line"><div class="label">学校名称</div><div class="ctrl"><input id="d4" placeholder="请输入"></div></div>
+  </fieldset>
+</div>
+
+<div class="panel">
+  <div class="group">E. 表格布局（td 前兄弟）</div>
+  <table><tr><td class="label">民族</td><td><input id="e1" placeholder="请输入"></td></tr>
+  <tr><td class="label">籍贯</td><td><input id="e2" placeholder="请输入"></td></tr></table>
+</div>
+
+<div class="panel">
+  <div class="group">F. 反向陷阱：真正无标签的框</div>
+  <div class="line"><div class="ctrl"><input id="f1" placeholder="请输入"></div></div>
+  <div class="line"><div class="ctrl"><input id="f2" placeholder="请输入验证码"></div></div>
+</div>
+</body>
+</html>

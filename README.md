@@ -97,7 +97,7 @@ python -m http.server 8777         # 仓库根目录
 
 ```bash
 python tools/cdp_eval.py --url "http://localhost:8777/tests/labels.html?v=1" --expr "window.__ltest()"
-python tools/cdp_file.py --file _probe_shell.js --url "http://localhost:8777/tests/harness_shell.html?v=1"
+python tools/cdp_file.py --file tools/probe/shell.js --url "http://localhost:8777/tests/harness_shell.html?v=1"
 ```
 
 `tests/harness_shell.html` 把 harness 放进 `srcdoc` iframe（`about:blank` 来源）——
