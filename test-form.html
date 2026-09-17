@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>网申模拟测试页</title>
+<style>body{font:15px "Microsoft YaHei";max-width:640px;margin:30px auto}.fi{margin-bottom:14px}.fi span{display:inline-block;width:110px}input,select,textarea{width:260px;padding:5px}table td{padding:4px}</style>
+</head>
+<body>
+<h2>某央企网申（模拟）</h2>
+<div class="fi"><label for="f_name">姓名</label><input id="f_name"></div>
+<div class="fi"><label for="f_name2">姓名</label><input id="f_name2" data-fw="1"><div style="font-size:12px;color:#888">框架状态: <span id="fw_state">空</span></div></div>
+<div class="fi"><label for="f_gender">性别</label><select id="f_gender"><option value="">请选择</option><option value="m">男</option><option value="f">女</option></select></div>
+<div class="fi"><span>手机号码</span><input></div>
+<table><tr><td>毕业院校</td><td><input></td></tr></table>
+<div class="fi"><label>政治面貌</label><input placeholder="请选择政治面貌"></div>
+<div class="fi"><span>身份证号</span><input></div>
+<!-- v0.3 新场景：同义词归位 / 中英文 / 人称scope / 独立custom -->
+<div class="fi"><span>移动号码</span><input></div>
+<div class="fi"><span>Contact Number</span><input></div>
+<div class="fi"><span>母亲姓名</span><input></div>
+<div class="fi"><span>父亲姓名</span><input></div>
+<div class="fi"><span>紧急联系人电话</span><input></div>
+<div class="fi"><span>毕业时间</span><input></div>
+<div class="fi"><span>楼层编号</span><input></div>
+<label>自我评价</label><br><textarea rows="2" style="width:400px"></textarea>
+<script>
+  // 模拟 React/Vue 受控组件：只有收到 input 事件才承认新值
+  const el = document.getElementById('f_name2');
+  const st = document.getElementById('fw_state');
+  let reactState = '';
+  el.addEventListener('input', () => { reactState = el.value; st.textContent = '已同步:' + reactState; });
+  setInterval(() => { if (el.value !== reactState && !el.matches(':focus')) el.value = reactState; }, 100);
+</script>
+</body>
+</html>

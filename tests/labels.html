@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>wsa 标签识别与写入诚实性回归（真实 content.js）</title>
+<style>
+  body{font:14px "Microsoft YaHei";max-width:900px;margin:16px auto;color:#233}
+  h2{font-size:16px}
+  .rep{font:12px/1.5 Consolas,monospace;white-space:pre-wrap;background:#0f1620;color:#cfe3ff;padding:10px;border-radius:6px}
+  .line{display:flex;margin-bottom:9px}
+  .label{width:120px;text-align:right;padding-right:12px;color:#556;line-height:29px;flex-shrink:0}
+  .label i{color:#d33;font-style:normal}
+  .ctrl{flex:1} input,select{width:280px;padding:5px;border:1px solid #cfd6dd;border-radius:4px}
+  table{border-collapse:collapse} td{padding:4px}
+  .err{color:#d33;font-size:12px} .badge{background:#eef4ff;color:#2f5d8a;border-radius:3px;padding:1px 5px;font-size:12px}
+  fieldset{border:1px solid #dde4ea;border-radius:6px;padding:9px;margin:0 0 10px} legend{font-weight:700;color:#2f5d8a}
+</style>
+</head>
+<body>
+<h2>标签识别 / 写入诚实性 / 危险候选 回归（假名数据，驱动真实 content.js）</h2>
+<p>控制台执行 <code>window.__ltest()</code> → 期望返回 pass/fail 计数。本页自带的 storage 垫片是独立键，不碰真实字典。</p>
+<div class="rep" id="rep">等待运行…</div>
+
+<div class="line"><div class="label">姓名<i>*</i></div><div class="ctrl"><input id="t_a1" placeholder="请输入"></div></div>
+<div class="line"><div class="label"><span>手机</span><span>号码</span><i>*</i></div><div class="ctrl"><input id="t_a2" placeholder="请输入"></div></div>
+<div class="line"><div class="label">毕业院校</div><div class="ctrl"><div class="inner"><input id="t_a3" placeholder="请输入"></div></div></div>
+<div class="line"><div class="label">是否服从调剂（请慎重选择并确认）</div><div class="ctrl"><input id="t_a4" placeholder="请输入"></div></div>
+<div class="line"><div class="ctrl"><label class="wrap-label">身份证号码 <input id="t_b1" placeholder="请输入"></label></div></div>
+<div class="line"><div class="label">政治面貌<i>*</i><input type="hidden" id="t_b2h"></div><div class="ctrl"><input id="t_b2" placeholder="请输入"></div></div>
+<div class="line"><div class="label">所学专业<select id="t_b3s"><option></option></select></div><div class="ctrl"><input id="t_b3" placeholder="请输入"></div></div>
+<div class="line"><div class="label">电子邮箱</div><div class="ctrl"><div class="err">邮箱格式不正确</div><input id="t_c1" placeholder="请输入"></div></div>
+<div class="line"><div class="label">紧急联系人电话<span class="badge">必填</span></div><div class="ctrl"><input id="t_c2" placeholder="请输入"></div></div>
+<div class="line"><div class="label">0/200</div><div class="ctrl"><textarea id="t_c3" placeholder="请输入"></textarea></div></div>
+<fieldset><legend>家庭主要成员</legend>
+  <div class="line"><div class="label">姓名</div><div class="ctrl"><input id="t_d1" placeholder="请输入"></div></div>
+  <div class="line"><div class="label">关系</div><div class="ctrl"><input id="t_d2" placeholder="请输入"></div></div>
+  <div class="line"><div class="label">联系电话</div><div class="ctrl"><input id="t_d3" placeholder="请输入"></div></div>
+</fieldset>
+<fieldset><legend>教育经历</legend>
+  <div class="line"><div class="label">学校名称</div><div class="ctrl"><input id="t_d4" placeholder="请输入"></div></div>
+</fieldset>
+<table><tr><td class="label">民族</td><td><input id="t_e1" placeholder="请输入"></td></tr>
+<tr><td class="label">籍贯</td><td><input id="t_e2" placeholder="请输入"></td></tr></table>
+<div class="line"><div class="ctrl"><input id="t_f1" placeholder="请输入"></div></div>
+<div class="line"><div class="ctrl"><input id="t_f2" placeholder="请输入验证码"></div></div>
+<div class="line"><div class="label">英语水平</div><div class="ctrl"><select id="t_g1"><option value=""></option><option>英语四级</option><option>英语六级</option><option>英语专业八级</option></select></div></div>
+<div class="line"><div class="label">政治面貌</div><div class="ctrl"><select id="t_g2"><option value=""></option><option>共青团员</option></select></div></div>
+
+<script>
+// host id 换成测试专用，避免与真实扩展的 content script 抢 DOM
+document.documentElement.dataset.wsaHostId = '__wsa_ltest_host__';
+</script>
+<script>
+// ===== chrome.storage.local 垫片（独立键 + 假名字典）=====
+(() => {
+  const KEY = '__wsa_ltest_store__';
+  let store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { store = {}; }
+  const listeners = [];
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} };
+  window.chrome = {
+    storage: {
+      local: {
+        get(keys, cb) {
+          let out = {};
+          if (keys == null) out = clone(store);
+          else if (typeof keys === 'string') { if (keys in store) out[keys] = clone(store[keys]); }
+          else if (Array.isArray(keys)) keys.forEach((k) => { if (k in store) out[k] = clone(store[k]); });
+          setTimeout(() => cb && cb(out), 0);
+        },
+        set(obj, cb) {
+          const chg = {};
+          Object.keys(obj).forEach((k) => { store[k] = clone(obj[k]); chg[k] = { newValue: clone(obj[k]) }; });
+          save(); listeners.forEach((fn) => fn(chg, 'local'));
+          if (cb) setTimeout(cb, 0);
+        },
+        remove(arr, cb) { arr.forEach((k) => { delete store[k]; }); save(); if (cb) setTimeout(cb, 0); },
+      },
+      onChanged: { addListener: (fn) => listeners.push(fn) },
+    },
+    runtime: { sendMessage: () => {}, getURL: (p) => p },
+  };
+  window.__store = () => clone(store);
+  window.__reset = () => { store = {}; save(); };
+})();
+</script>
+<script src="../data.js"></script>
+<script src="../concepts.js"></script>
+<script src="../matcher.js"></script>
+<script>
+// 播种假名字典：复刻"本机已有 15 个概念有值、emergency/period 无值"的形态
+(() => {
+  const FILLED = {
+    name: '张三', phone: '138xxxx0000', email: 'you@example.com', idno: '证件号示例X',
+    birthdate: '199x.xx.xx', gender: '男', ethnicity: '汉', politics: '共青团员',
+    hometown: '某某省某某市', school: '某某大学', education: '硕士', degree: '文学学位',
+    major: '某某专业', grad_date: '2027.6.1', period: '2024.9.1',
+  };
+  __reset();
+  const concepts = {};
+  for (const c of window.WSA_CONCEPTS) concepts[c.id] = { userAliases: [], options: FILLED[c.id] ? [{ value: FILLED[c.id], tag: '' }] : [] };
+  concepts.emergency.options = [];           // 关键：紧急联系人没有存过值
+  chrome.storage.local.set({ wsa_dict_v2: { version: 2, concepts, custom: [] } });
+})();
+</script>
+<script src="../content.js"></script>
+<script>
+// ===== 用例 =====
+const R = { pass: 0, fail: 0, messages: [] };
+function ok(name, cond) { if (cond) R.pass++; else { R.fail++; R.messages.push(name); } }
+const tick = (ms) => new Promise((r) => setTimeout(r, ms || 80));
+const $ = (id) => document.getElementById(id);
+const HOST = '__wsa_ltest_host__';
+function panel() { const h = $(HOST); return h && h.shadowRoot ? h.shadowRoot.querySelector('.panel') : null; }
+function card() {
+  const p = panel();
+  if (!p || p.style.display === 'none') return { visible: false, title: '', rows: [], hint: '' };
+  const hb = p.querySelector('.head .box');
+  const hn = p.querySelector('.hint');
+  return {
+    visible: true,
+    title: hb ? hb.textContent.replace('框：', '').trim() : '',
+    hint: hn ? hn.textContent.trim() : '',
+    rows: Array.from(p.querySelectorAll('.row')).filter((r) => !r.classList.contains('add'))
+      .map((r) => r.textContent.trim().replace(/\s+/g, ' ')),
+  };
+}
+async function focus(id) { $(id).blur(); await tick(25); $(id).focus(); await tick(170); return card(); }
+async function clickRow(n) {
+  const p = panel();
+  const rows = Array.from(p.querySelectorAll('.row')).filter((r) => !r.classList.contains('add'));
+  if (!rows[n]) return { toast: '' };
+  rows[n].click();
+  const t = p.querySelector('.toast');
+  const toast = t ? t.textContent.trim() : '';
+  await tick(120);
+  return { toast };
+}
+
+// 标签识别：期望卡片标题
+const LABELS = [
+  ['t_a1', '姓名'], ['t_a2', '手机号码'], ['t_a3', '毕业院校'], ['t_a4', '是否服从调剂'],
+  ['t_b1', '身份证号码'], ['t_b2', '政治面貌'], ['t_b3', '所学专业'], ['t_c1', '电子邮箱'],
+  ['t_c2', '紧急联系人电话'], ['t_d1', '姓名'], ['t_d3', '联系电话'], ['t_d4', '学校名称'],
+  ['t_e1', '民族'], ['t_e2', '籍贯'], ['t_f2', '验证码'],
+];
+// 必须"未识别"的（真无标签 / 纯计数）
+const MUST_UNKNOWN = ['t_c3', 't_f1'];
+
+window.__ltest = async () => {
+  for (let i = 0; i < 40 && !window.__store().wsa_dict_v2; i++) await tick(50);
+
+  for (const [id, exp] of LABELS) {
+    const c = await focus(id);
+    ok('标签 ' + id + ' → ' + exp + '（实得 ' + (c.title || '未识别') + '）',
+      c.title.includes(exp) && !/^请输入|^请选择/.test(c.title));
+  }
+  for (const id of MUST_UNKNOWN) {
+    const c = await focus(id);
+    ok('应未识别 ' + id + '（实得 ' + (c.title || '未识别') + '）',
+      (c.title === '' || c.title === '未识别') && !/^[\d/]+$/.test(c.title));
+  }
+
+  // 写入诚实性
+  await focus('t_a1');
+  const w1 = await clickRow(0);
+  ok('W1 普通写入值正确', $('t_a1').value === '张三');
+  ok('W1 toast 说已填入', /已填入/.test(w1.toast));
+
+  const a2 = $('t_a2');
+  a2.addEventListener('input', () => { a2.value = a2.value.replace(/\D/g, '').slice(0, 5); });
+  await focus('t_a2');
+  const w2 = await clickRow(0);
+  ok('W2 被改写时 toast 不谎报成功', a2.value !== '138xxxx0000' && /改写|核对/.test(w2.toast));
+
+  const a3 = $('t_a3');
+  a3.addEventListener('change', () => { a3.value = ''; });
+  await focus('t_a3');
+  const w3 = await clickRow(0);
+  ok('W3 被还原时 toast 报未生效', a3.value === '' && /未生效|手动/.test(w3.toast));
+
+  await focus('t_g2');
+  await clickRow(0);
+  ok('W4 select 精确命中', $('t_g2').value === '共青团员');
+
+  // 危险候选：紧急联系人电话不得列出本人手机号
+  const s1 = await focus('t_c2');
+  ok('S1 紧急联系人电话不列本人手机号', !s1.rows.some((r) => r.includes('138xxxx0000')));
+  ok('S1 命中概念但无值时有明确提示', /还没存过|未识别/.test(s1.hint));
+
+  // 过度匹配抑制：身份证框不捎带手机号；学校框不捎带毕业时间
+  const s2 = await focus('t_b1');
+  ok('S2 身份证框不捎带手机号', !s2.rows.some((r) => r.includes('138xxxx0000')));
+  const s3 = await focus('t_d4');
+  ok('S3 学校框不捎带毕业时间', !s3.rows.some((r) => r.includes('2027.6.1')));
+
+  // 未修过头：联系电话仍命中手机号
+  const s4 = await focus('t_d3');
+  ok('S4 联系电话仍命中手机号', s4.rows.some((r) => r.includes('138xxxx0000')));
+
+  // 记住：标签不可用时拒绝入库（不产生垃圾键）
+  await focus('t_f1');
+  $('t_f1').focus();
+  $('t_f1').value = '随意值';
+  $('t_f1').dispatchEvent(new Event('input', { bubbles: true }));
+  await tick(40);
+  const addBtn = panel().querySelector('.row.add');
+  if (addBtn) addBtn.click();
+  await tick(160);
+  const custom = (window.__store().wsa_dict_v2 || {}).custom || [];
+  ok('R1 未识别标签不写垃圾键', !custom.some((e) => /^t_f1$|请输入/.test(e.label)));
+
+  document.getElementById('rep').textContent = JSON.stringify(R, null, 1);
+  return JSON.stringify(R);
+};
+</script>
+</body>
+</html>

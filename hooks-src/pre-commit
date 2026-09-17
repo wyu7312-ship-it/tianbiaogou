@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# pre-commit 隐私红线钩子（规则见 AGENTS.md）
+# 扫描暂存内容：通用 PII 正则 + private/pii-patterns.txt 精确禁词
+set -u
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+PATTERNS_FILE="$REPO_ROOT/private/pii-patterns.txt"
+
+# 允许出现在示例/文档中的替身写法（这些行不算命中）
+SAFE='example\.com|example\.org|138xxxx0000|张三|李四|wangyi@example|xxx'
+
+fail=0
+files=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$files" ] && exit 0
+
+# Git Bash 下逐文件扫描
+while IFS= read -r f; do
+  case "$f" in
+    private/*|.git/*) continue ;;
+  esac
+  [ -f "$REPO_ROOT/$f" ] || continue
+  content=$(git show ":$f" 2>/dev/null)
+  [ -z "$content" ] && continue
+  hits=$(printf '%s\n' "$content" \
+    | grep -nE '1[3-9][0-9]{9}|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(com|cn|net|org)|[0-9]{17}[0-9Xx]' \
+    | grep -vE "$SAFE" || true)
+  if [ -n "$hits" ]; then
+    echo "❌ [PII红线] $f 疑似含真实个人信息（正则命中）:"
+    printf '%s\n' "$hits" | head -5
+    fail=1
+  fi
+  if [ -f "$PATTERNS_FILE" ]; then
+    while IFS= read -r p; do
+      [ -z "$p" ] && continue
+      case "$p" in \#*) continue ;; esac
+      if printf '%s\n' "$content" | grep -qF -- "$p"; then
+        echo "❌ [PII红线] $f 命中禁词（private/pii-patterns.txt）: $p"
+        fail=1
+      fi
+    done < "$PATTERNS_FILE"
+  fi
+done <<< "$files"
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "提交已被拒绝。参见 AGENTS.md 隐私红线；替身写法见其表格。"
+  echo "确属误报才可 'git commit --no-verify'，但必须先向用户报告并获同意。"
+  exit 1
+fi
+exit 0

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>wsa 集成回归（垫片驱动真实 content.js）</title>
+<style>
+  body{font:15px "Microsoft YaHei";max-width:640px;margin:30px auto}
+  .fi{margin-bottom:14px}.fi span{display:inline-block;width:120px}
+  input{width:260px;padding:5px}
+  table td{padding:4px}
+</style>
+</head>
+<body>
+<h2>网申集成回归（假名数据，零真实信息）</h2>
+<div class="fi"><span>姓名</span><input id="f_name"></div>
+<div class="fi"><span>姓名</span><input id="f_name2" data-fw="1"><div style="font-size:12px;color:#888">框架状态: <span id="fw_state">空</span></div></div>
+<div class="fi"><span>移动号码</span><input id="f_mobile"></div>
+<div class="fi"><span>母亲姓名</span><input id="f_mother"></div>
+<div class="fi"><span>楼层编号</span><input id="f_floor"></div>
+<!-- zhiye/phoenix 类旁支结构：标签是与控件容器并列的兄弟元素，input 只有占位符"请输入" -->
+<div id="zhiye_row"><div>姓名</div><div class="control"><input id="f_zhiye" placeholder="请输入"></div></div>
+
+<script>
+// 模拟 React/Vue 受控组件：只有收到 input 事件才承认新值
+(() => {
+  const el = document.getElementById('f_name2');
+  const st = document.getElementById('fw_state');
+  let reactState = '';
+  el.addEventListener('input', () => { reactState = el.value; st.textContent = '已同步:' + reactState; });
+  setInterval(() => { if (el.value !== reactState && !el.matches(':focus')) el.value = reactState; }, 100);
+})();
+</script>
+
+<script>
+// === chrome.storage.local 垫片（内存 + localStorage 持久化，触发 onChanged）===
+(() => {
+  const KEY = '__wsa_test_storage__';
+  // 每次载入固定种子一份 v1 旧字典 → 真实验证 ensureDict 的迁移链
+  const SEED_V1 = [
+    { label: '姓名', aliases: ['姓名'], options: [{ value: '张三' }] },
+    { label: '母亲姓名', aliases: ['母亲姓名'], options: [{ value: '李母' }] },
+    { label: '移动号码', aliases: ['移动号码'], options: [{ value: '138xxxx0000' }] },
+  ];
+  let store = {};
+  try { store = { wsa_dict: JSON.parse(JSON.stringify(SEED_V1)) }; } catch (e) { store = {}; }
+  const listeners = [];
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  window.chrome = {
+    storage: {
+      local: {
+        get(keys, cb) {
+          let out = {};
+          if (keys == null) out = clone(store);
+          else if (typeof keys === 'string') { if (keys in store) out[keys] = clone(store[keys]); }
+          else if (Array.isArray(keys)) keys.forEach((k) => { if (k in store) out[k] = clone(store[k]); });
+          setTimeout(() => cb && cb(out), 0);
+        },
+        set(obj, cb) {
+          const chg = {};
+          Object.keys(obj).forEach((k) => { store[k] = clone(obj[k]); chg[k] = { newValue: clone(obj[k]) }; });
+          try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+          listeners.forEach((fn) => fn(chg, 'local'));
+          if (cb) setTimeout(cb, 0);
+        },
+        remove(arr, cb) { arr.forEach((k) => { delete store[k]; }); try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} if (cb) setTimeout(cb, 0); },
+      },
+      onChanged: { addListener: (fn) => listeners.push(fn) },
+    },
+    runtime: { sendMessage: () => {}, getURL: (p) => p },
+  };
+  window.__store = () => clone(store); // 测试断言用
+})();
+</script>
+<script src="../data.js"></script>
+<script src="../concepts.js"></script>
+<script src="../matcher.js"></script>
+<script src="../content.js"></script>
+
+<script>
+const R = { pass: 0, fail: 0, messages: [] };
+function ok(n, c) { if (c) R.pass++; else { R.fail++; R.messages.push(n); } }
+const tick = (ms) => new Promise((r) => setTimeout(r, ms || 60));
+const $ = (id) => document.getElementById(id);
+function panel() { const h = $('__wsa_host__'); return h && h.shadowRoot ? h.shadowRoot.querySelector('.panel') : null; }
+function visibleRows() { const p = panel(); if (!p) return []; return Array.from(p.querySelectorAll('.row')).filter((r) => !r.classList.contains('add')); }
+function rowTexts() { return visibleRows().map((r) => r.textContent); }
+function addBtn() { const p = panel(); return p ? p.querySelector('.row.add') : null; }
+function headLabels() { const p = panel(); const hc = p && p.querySelector('.head'); return hc ? hc.textContent : ''; }
+async function focusField(id) { $(id).blur(); await tick(20); $(id).focus(); await tick(120); }
+
+window.__itest = async () => {
+  // 0) 等 ensureDict 完成迁移
+  for (let i = 0; i < 40 && !window.__store().wsa_dict_v2; i++) await tick(50);
+  const s = window.__store();
+  ok('迁移生成 v2', s.wsa_dict_v2 && s.wsa_dict_v2.version === 2);
+  ok('迁移保留 v1 备份', Array.isArray(s.wsa_dict_backup_v1));
+  ok('姓名归位且李母带母亲scope',
+    s.wsa_dict_v2.concepts.name.options.some((o) => o.value === '李母' && o.tag === '母亲'));
+  ok('移动号码归位为phone别名', s.wsa_dict_v2.concepts.phone.userAliases.includes('移动号码'));
+
+  // 1) 版本探针 + 卡片可见（host 在首次 render 时由 ensureUI 创建，须在 focus 后再取）
+  await focusField('f_name');
+  const host = $('__wsa_host__');
+  ok('版本探针 0.4', host && host.dataset.wsa === '0.4');
+  ok('姓名框弹出卡片', !!panel() && panel().style.display !== 'none');
+  const nameRows = rowTexts();
+  ok('姓名全列含张三+李母', nameRows.some((t) => t.includes('张三')) && nameRows.some((t) => t.includes('李母')));
+  ok('候选带母亲标签', nameRows.some((t) => t.includes('李母') && t.includes('母亲')));
+
+  // 2) React 受控框：focus f_name2 后点选张三 → 只填该框且框架承认
+  await focusField('f_name2');
+  const rows = visibleRows();
+  const zhang = rows.find((r) => r.textContent.includes('张三'));
+  if (zhang) zhang.click();
+  await tick(120);
+  ok('张三填入 f_name2', $('f_name2').value === '张三');
+  ok('React 框架承认（收到 input 事件）', $('fw_state').textContent === '已同步:张三');
+
+  // 3) 母亲姓名框：限定词识别，卡片仍列两条供点选（不误锁本人）
+  await focusField('f_mother');
+  ok('母亲姓名框出候选', rowTexts().length >= 1);
+  ok('卡片提示归入姓名概念', headLabels().includes('姓名'));
+
+  // 4) 移动号码归位：不靠"手机"字面，也弹 138xxxx0000
+  await focusField('f_mobile');
+  ok('移动号码归位手机候选', rowTexts().some((t) => t.includes('138xxxx0000')));
+
+  // 5) 楼层编号：无命中→手动填→记住→独立 custom
+  await focusField('f_floor');
+  ok('楼层编号初为无命中提示', (() => { const p = panel(); return p && p.querySelector('.hint'); })());
+  $('f_floor').focus(); $('f_floor').value = '3层'; $('f_floor').dispatchEvent(new Event('input', { bubbles: true }));
+  await tick(30);
+  const ab = addBtn();
+  ok('记住入口常驻', !!ab);
+  if (ab) ab.click();
+  await tick(80);
+  const s2 = window.__store();
+  ok('楼层编号独立存 custom',
+    s2.wsa_dict_v2.custom.some((e) => e.label === '楼层编号' && e.options.some((o) => o.value === '3层')));
+  // 再点楼层框 → 应回显候选（证明记住生效）
+  await focusField('f_floor');
+  ok('记住后楼层框回显候选', rowTexts().some((t) => t.includes('3层')));
+
+  // 6) zhiye 回归：标签是与控件容器并列的兄弟元素，input 只有"请输入"占位符
+  //    期望：卡片标题取"姓名"而非"请输入"，且仍列出 张三/李母 供点选
+  await focusField('f_zhiye');
+  const zhHead = headLabels();
+  ok('旁支兄弟标签识别为姓名', zhHead.includes('姓名'));
+  ok('占位符"请输入"不当标签', !zhHead.includes('请输入'));
+  const zhRows = rowTexts();
+  ok('姓名旁支框全列候选', zhRows.some((t) => t.includes('张三')) && zhRows.some((t) => t.includes('李母')));
+
+  return JSON.stringify(R);
+};
+document.body.insertAdjacentHTML('beforeend', '<div id="itip">window.__itest() 就绪</div>');
+</script>
+</body>
+</html>

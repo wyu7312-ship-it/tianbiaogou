@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>网申填充助手 · 字典管理</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.6 -apple-system, "Microsoft YaHei", sans-serif; background: #f5f6f8; color: #1a1a1a; padding: 24px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #66707a; font-size: 13px; margin-bottom: 18px; }
+  .bar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  button { border: 1px solid #c8d0d8; background: #fff; border-radius: 8px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
+  button:hover { border-color: #2B4C7E; color: #2B4C7E; }
+  button.primary { background: #2B4C7E; border-color: #2B4C7E; color: #fff; }
+  button.danger { color: #c0392b; border-color: #e0b4ae; }
+  .card { background: #fff; border: 1px solid #e3e8ee; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card.dim { opacity: .62; }
+  .card .top { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+  .card label { font-size: 12px; color: #66707a; flex-shrink: 0; }
+  .cname { font-weight: 700; font-size: 15px; }
+  .chip { font-size: 11px; color: #5b6b7c; background: #eef2f6; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+  .chip.custom { color: #7a4b00; background: #fff2d9; }
+  input[type=text], textarea { border: 1px solid #c8d0d8; border-radius: 6px; padding: 6px 8px; font-size: 13px; font-family: inherit; width: 100%; }
+  .top input.aliases { flex: 1; min-width: 200px; }
+  .opt { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+  .opt .v { flex: 1; min-height: 34px; }
+  .opt .t { width: 150px; flex-shrink: 0; }
+  .opt button { flex-shrink: 0; padding: 6px 10px; }
+  .del { margin-left: auto; }
+  #status { font-size: 13px; color: #1a7f37; align-self: center; }
+  .io { display: none; margin-bottom: 18px; }
+  .io textarea { height: 220px; font-family: Consolas, monospace; }
+  .tip { font-size: 12px; color: #8896a6; margin-top: 2px; }
+  #wizard { border-color: #bcd0e8; background: #f6faff; }
+  #wizard .hintline { font-size: 13px; color: #57606a; margin-bottom: 10px; }
+  #wizlist { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  #wizlist li label { display: block; font-size: 13px; color: #1a1a1a; }
+  #wizlist .sec { color: #8a5a00; font-size: 11px; }
+  #wizlist input { margin-top: 4px; }
+  #wizlist select { margin-top: 4px; border: 1px solid #c8d0d8; border-radius: 6px; padding: 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>网申填充助手 · 字典管理</h1>
+  <div class="sub">数据只存在本浏览器本地（chrome.storage.local），扩展无任何网络代码。点网站输入框时弹出的候选就来自这里。</div>
+
+  <div class="card" id="wizard" hidden>
+    <div class="hintline">👋 第一次用：先花 2 分钟把自己的信息填一遍（留空也没关系，之后在网申页点框 →「记住」会慢慢积累）。<b>所有内容只写进本机浏览器，不上传任何地方。</b></div>
+    <form id="wizform">
+      <ol id="wizlist"></ol>
+      <div class="bar" style="margin-bottom:0">
+        <button type="submit" class="primary">💾 保存字典</button>
+        <button type="button" id="wizskip">跳过，边用边记</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="bar">
+    <button class="primary" id="save">💾 保存全部</button>
+    <button id="addField">＋ 新增自定义字段</button>
+    <button id="toggleEmpty">展开空概念</button>
+    <button id="toggleIO">导入/导出 JSON</button>
+    <button class="danger" id="wipe">🗑 一键清空本机字典</button>
+    <span id="status"></span>
+  </div>
+  <div class="io" id="ioBox">
+    <textarea id="ioText" spellcheck="false"></textarea>
+    <div class="bar" style="margin-top:8px">
+      <button id="doExport">把当前字典填入上方文本框</button>
+      <button id="doImport">用上方文本框替换字典</button>
+    </div>
+    <div class="tip">备份 JSON 含个人信息，请保存到 <code>private/</code> 目录（已被 .gitignore 保护），切勿提交、上传或发给他人。</div>
+  </div>
+  <div id="list"></div>
+</div>
+<script src="concepts.js"></script>
+<script src="matcher.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

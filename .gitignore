@@ -1,0 +1,17 @@
+# 真实个人数据目录 —— 永不提交（AGENTS.md 隐私红线）
+private/
+# 浏览器/系统杂物
+Thumbs.db
+desktop.ini
+*.swp
+# 导出备份若在仓库根目录也一律排除
+*.wsa-dict.json
+# 调试探针脚本与 dump —— 真值常从浏览器存储原样带出，永不提交（2026-09-17 PII扫描实录）
+_live_*
+_real_*
+_ats_*
+_probe_*
+_hay_*
+_tmp_*
+_pii_scan_tmp.json
+tests/atsform.html

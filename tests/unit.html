@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>wsa unit tests</title></head>
+<body>
+<script src="../concepts.js"></script>
+<script src="../matcher.js"></script>
+<script>
+// 网申填充助手 · 纯逻辑层断言套件（不依赖扩展加载，改代码刷新即测）
+const R = { pass: 0, fail: 0, messages: [] };
+function ok(name, cond) { if (cond) R.pass++; else { R.fail++; R.messages.push(name); } }
+function block(name, fn) { try { fn(); } catch (e) { R.fail++; R.messages.push(name + ' 抛错: ' + String(e && e.message || e).slice(0, 90)); } }
+const C = window.WSA_CONCEPTS, Q = window.WSA_QUALIFIERS;
+
+block('T1', () => {
+  ok('WSA存在', typeof window.WSA === 'object' && typeof WSA.norm === 'function');
+  ok('norm去空白标点', WSA.norm(' 手机：号码【1】 ') === '手机号码1');
+});
+
+block('T2', () => {
+  ok('概念数≥25', C.length >= 25);
+  const IDS = 'name phone email gender ethnicity birthdate idno hometown politics education degree major school grad_date period intent city company jobtitle english cet_score putonghua comp_level license award selfeval address qq emergency'.split(' ');
+  ok('id集合齐全', IDS.every(i => C.some(c => c.id === i)) && C.length === IDS.length);
+  ok('每概念有中文词', C.every(c => c.zh.length >= 2));
+  ok('姓名/电话是person概念', C.find(c => c.id === 'name').person === true && C.find(c => c.id === 'phone').person === true);
+  ok('身份证非person', C.find(c => c.id === 'idno').person !== true);
+  ok('限定词含母亲父亲配偶紧急联系人', ['mother', 'father', 'spouse', 'emergency'].every(k => Q.some(q => q.key === k)));
+});
+
+block('T3', () => {
+  const D = { version: 2, concepts: {}, custom: [] };
+  for (const c of C) D.concepts[c.id] = { userAliases: [], options: [] };
+  D.concepts.phone.options.push({ value: '138xxxx0000' });
+  D.concepts.name.options.push({ value: '张三' }, { value: '李母', tag: '母亲' }, { value: '老王', tag: '紧急联系人' });
+  D.concepts.email.options.push({ value: 'you@example.com' });
+  D.concepts.idno.options.push({ value: '证件号示例X' });
+  const m = (hay) => WSA.matchConcepts(hay, D).map(h => h.concept.id);
+  ok('移动号码→phone', m(['移动号码'])[0] === 'phone');
+  ok('Contact Number→phone', m(['Contact Number'])[0] === 'phone');
+  ok('联系电话→phone优先于emergency', m(['联系电话'])[0] === 'phone');
+  ok('房间号不误报phone', !m(['房间号']).includes('phone'));
+  ok('母亲姓名→name', m(['母亲姓名'])[0] === 'name');
+  ok('紧急联系人电话→phone命中', m(['紧急联系人电话']).includes('phone'));
+  ok('限定词母亲', WSA.detectQualifier(['母亲姓名']) === '母亲');
+  ok('限定词紧急联系人优先', WSA.detectQualifier(['紧急联系人电话']) === '紧急联系人');
+  ok('无限定词返回null', WSA.detectQualifier(['姓名']) === null);
+  const rows = WSA.buildRows(['姓名'], D);
+  ok('姓名框全列3候选', rows.length === 3);
+  ok('候选带tag', rows.some(r => r.tag === '母亲') && rows.some(r => r.tag === '紧急联系人'));
+  ok('学信网邮箱→email强命中不带weak', WSA.buildRows(['学信网邮箱'], D).every(r => !r.weak && r.label === '邮箱'));
+  ok('弱命中示例证件照', (() => { const w = WSA.buildRows(['证件照'], D); return w.length > 0 && w.every(r => r.weak === true); })());
+  ok('滑片分数', WSA.shingleScore('邮箱', '电子邮箱') === 1 && WSA.shingleScore('邮编', '邮箱') < 0.4);
+});
+
+block('T4', () => {
+  const V1 = [
+    { label: '移动号码', aliases: ['移动号码'], options: [{ value: '138xxxx0000' }] },
+    { label: '母亲姓名', aliases: ['母亲姓名'], options: [{ value: '李母' }] },
+    { label: '楼层编号', aliases: ['楼层编号'], options: [{ value: '3层' }] },
+    { label: '自我评价', aliases: ['自我评价'], options: [{ value: '样例文本' }] },
+  ];
+  const V2 = WSA.migrateV1(V1, C);
+  ok('手机号归入phone', V2.concepts.phone.options.some(o => o.value === '138xxxx0000'));
+  ok('移动号码成为别名', V2.concepts.phone.userAliases.includes('移动号码'));
+  ok('母亲姓名带scope', V2.concepts.name.options.some(o => o.value === '李母' && o.tag === '母亲'));
+  ok('楼层编号进custom', V2.custom.some(e => e.label === '楼层编号'));
+  ok('自我评价进概念', V2.concepts.selfeval.options.length === 1);
+  ok('自我评价不重复建别名', !V2.concepts.selfeval.userAliases.includes('自我评价'));
+  const A = JSON.stringify(WSA.migrateV1(V1, C).concepts.phone.userAliases);
+  const B = JSON.stringify(V2.concepts.phone.userAliases);
+  ok('迁移确定', A === B);
+  const S = WSA.seedV2();
+  ok('种子全空值', Object.values(S.concepts).every((x) => x.options.length === 0));
+});
+
+block('T5', () => {
+  const F = WSA.seedV2();
+  F.concepts.name.options.push({ value: '张三' }, { value: '李母', tag: '母亲' });
+  F.concepts.phone.options.push({ value: '138xxxx0000' });
+  F.concepts.idno.options.push({ value: '证件号示例X' }); // 文字占位，勿写18位面值（触发PII钩子）
+  const cases = [
+    [['移动号码'], 'phone'], [['Contact Number'], 'phone'], [['母亲姓名'], 'name'],
+    [['紧急联系人电话'], 'emergency|phone'], [['身份证号'], 'idno'], [['毕业时间'], 'grad_date'],
+  ];
+  for (const cs of cases) {
+    const got = WSA.matchConcepts(cs[0], F).map(h => h.concept.id);
+    ok('场景' + cs[0], cs[1].split('|').some((w) => got[0] === w || got.includes(w)));
+  }
+  ok('姓名列本人母亲两条', WSA.buildRows(['姓名'], F).length === 2);
+});
+
+block('T6', () => {
+  ok('wizardFields存在', typeof WSA.wizardFields === 'function');
+  const WF = WSA.wizardFields();
+  ok('字段数与概念数一致', WF.length === C.length);
+  ok('向导含姓名手机邮箱', ['name', 'phone', 'email'].every((i) => WF.some((f) => f.id === i)));
+  ok('敏感项标secret', ['idno', 'birthdate', 'phone', 'email', 'address', 'qq', 'emergency'].every((i) => WF.find((f) => f.id === i).secret === true));
+  ok('非敏感项不secret', WF.find((f) => f.id === 'gender').secret !== true);
+  ok('提示词与person齐全', WF.every((f) => f.zhHint.length >= 2 && typeof f.person === 'boolean' && !!f.label));
+});
+
+// T8: 过度匹配抑制（v0.4）——高分概念压倒"只是其匹配词子串"的低分概念
+block('T8', () => {
+  const F = WSA.seedV2();
+  for (const c of C) F.concepts[c.id] = { userAliases: [], options: [{ value: 'V·' + c.id }] };
+  const ids = (h) => WSA.buildRows([h], F).map((r) => r.label);
+  ok('身份证号码不捎带手机号', !ids('身份证号码').includes('手机号'));
+  ok('证件号码不捎带手机号', !ids('证件号码').includes('手机号'));
+  ok('毕业院校不捎带毕业时间', !ids('毕业院校').includes('毕业时间'));
+  ok('紧急联系人电话不捎带手机号', !ids('紧急联系人电话').includes('手机号'));
+  // 反向：真命中不许被误抑制
+  ok('联系电话仍命中手机号', ids('联系电话').includes('手机号'));
+  ok('移动电话仍命中手机号', ids('移动电话').includes('手机号'));
+  ok('毕业时间仍命中毕业时间', ids('毕业时间').includes('毕业时间'));
+  ok('紧急联系方式仍命中紧急联系人', ids('紧急联系方式').includes('紧急联系人'));
+});
+
+// T9: cleanDict 共享清洗（content.js「记住」与 options.js 保存共用同一实现）
+block('T9', () => {
+  ok('cleanDict 存在', typeof WSA.cleanDict === 'function');
+  const d = {
+    version: 2,
+    concepts: {
+      phone: { userAliases: [' 移动号码 ', '', '  '], options: [{ value: '138xxxx0000' }, { value: '   ' }, null, { value: ' x ', tag: undefined }] },
+    },
+    custom: [{ label: '  楼层编号  ', aliases: ['楼', ''], options: [{ value: '3层' }, { value: '' }] }, { label: '  ', options: [] }],
+  };
+  const o = WSA.cleanDict(d, C);
+  ok('别名去空去重去空白', JSON.stringify(o.concepts.phone.userAliases) === JSON.stringify(['移动号码']));
+  ok('候选值去空并 trim', o.concepts.phone.options.length === 2
+    && o.concepts.phone.options[0].value === '138xxxx0000' && o.concepts.phone.options[1].value === 'x');
+  ok('tag 归一为空串', o.concepts.phone.options[0].tag === '' && o.concepts.phone.options[1].tag === '');
+  ok('空 label 的 custom 被丢弃', o.custom.length === 1 && o.custom[0].label === '楼层编号');
+  ok('概念骨架补全', Object.keys(o.concepts).length === C.length);
+  ok('纯函数不改原对象', d.concepts.phone.userAliases.length === 3);
+  ok('空输入返回合法骨架', (() => { const z = WSA.cleanDict(null, C); return z.version === 2 && Object.keys(z.concepts).length === C.length && z.custom.length === 0; })());
+});
+
+// T7: 零联网自检——读"源码文本"扫违禁模式（扩展运行时的硬保证在 Task7 集成阶段由 manifest+人工复核兜底）
+const T7P = (async () => {
+  const SRCS = ['../content.js', '../matcher.js', '../concepts.js', '../data.js', '../background.js', '../options.js'];
+  const BANNED = /\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|storage\.sync|host_permissions/;
+  const all = await Promise.all(SRCS.map((u) => fetch(u).then((r) => r.text()).catch(() => '__FETCH_FAIL__')));
+  all.forEach((t, i) => ok('无外发通道:' + SRCS[i], t !== '__FETCH_FAIL__' && !BANNED.test(t)));
+  const m = await fetch('../manifest.json').then((r) => r.text()).catch(() => '');
+  ok('manifest权限仅storage', /"permissions"\s*:\s*\[\s*"storage"\s*\]/.test(m) && !/host_permissions/.test(m));
+})();
+
+window.__report = () => T7P.then(() => JSON.stringify(R));
+T7P.then(() => document.body.append(JSON.stringify(R)));
+</script>
+</body>
+</html>

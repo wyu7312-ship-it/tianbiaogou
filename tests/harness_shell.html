@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>harness 隔离壳（srcdoc iframe，避开真实扩展注入）</title>
+<style>
+  body{font:14px "Microsoft YaHei";margin:10px;color:#233}
+  #info{color:#666;font-size:12px;margin-bottom:6px}
+  iframe{width:100%;height:calc(100vh - 80px);border:1px solid #cfd6dd;border-radius:8px;background:#fff}
+</style>
+</head>
+<body>
+<div id="info">正在装配隔离 harness…</div>
+<iframe id="fr"></iframe>
+<script>
+// 整个 harness 跑在 srcdoc iframe 内（about:blank 来源）：
+// 真实扩展的 content_scripts 只匹配 http/https 且未开 match_about_blank，因此不会注入这里，
+// 保证测到的是注入的 bundle，而不是已装扩展的旧实例。
+const fr = document.getElementById('fr');
+const HARNESS_DOC = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<base href="http://localhost:8777/tests/">
+<style>
+  body{font:13px "Microsoft YaHei";margin:10px;color:#233}
+  .res{font:12px/1.5 Consolas,monospace;white-space:pre-wrap;max-height:300px;overflow:auto;background:#0f1620;color:#cfe3ff;padding:10px;border-radius:6px}
+  .line{display:flex;margin-bottom:9px}
+  .label{width:120px;text-align:right;padding-right:12px;color:#556;line-height:29px;flex-shrink:0}
+  .label i{color:#d33;font-style:normal}
+  .ctrl{flex:1}
+  input,select{width:280px;padding:5px;border:1px solid #cfd6dd;border-radius:4px}
+  table{border-collapse:collapse} td{padding:4px}
+  .err{color:#d33;font-size:12px} .badge{background:#eef4ff;color:#2f5d8a;border-radius:3px;padding:1px 5px;font-size:12px}
+  fieldset{border:1px solid #dde4ea;border-radius:6px;padding:9px;margin:0 0 10px} legend{font-weight:700;color:#2f5d8a}
+  #bar{border:1px solid #d6e0ea;background:#f7fbff;border-radius:8px;padding:8px;margin-bottom:10px}
+</style>
+</head><body>
+<div id="bar">状态：<b id="status">未注入</b> <span id="ver"></span>
+  <button id="inject">注入 / 重新注入</button> <button id="runall">跑全部用例</button>
+</div>
+<div class="res" id="res">等待…</div>
+
+<div class="line"><div class="label">姓名<i>*</i></div><div class="ctrl"><input id="a1" placeholder="请输入"></div></div>
+<div class="line"><div class="label"><span>手机</span><span>号码</span><i>*</i></div><div class="ctrl"><input id="a2" placeholder="请输入"></div></div>
+<div class="line"><div class="label">毕业院校</div><div class="ctrl"><div class="inner"><input id="a3" placeholder="请输入"></div></div></div>
+<div class="line"><div class="label">是否服从调剂（请慎重选择并确认）</div><div class="ctrl"><input id="a4" placeholder="请输入"></div></div>
+<div class="line"><div class="ctrl"><label class="wrap-label">身份证号码 <input id="b1" placeholder="请输入"></label></div></div>
+<div class="line"><div class="label">政治面貌<i>*</i><input type="hidden" id="b2h"></div><div class="ctrl"><input id="b2" placeholder="请输入"></div></div>
+<div class="line"><div class="label">所学专业<select id="b3s"><option></option></select></div><div class="ctrl"><input id="b3" placeholder="请输入"></div></div>
+<div class="line"><div class="label">电子邮箱</div><div class="ctrl"><div class="err">邮箱格式不正确</div><input id="c1" placeholder="请输入"></div></div>
+<div class="line"><div class="label">紧急联系人电话<span class="badge">必填</span></div><div class="ctrl"><input id="c2" placeholder="请输入"></div></div>
+<div class="line"><div class="label">0/200</div><div class="ctrl"><textarea id="c3" placeholder="请输入"></textarea></div></div>
+<fieldset><legend>家庭主要成员</legend>
+  <div class="line"><div class="label">姓名</div><div class="ctrl"><input id="d1" placeholder="请输入"></div></div>
+  <div class="line"><div class="label">关系</div><div class="ctrl"><input id="d2" placeholder="请输入"></div></div>
+  <div class="line"><div class="label">联系电话</div><div class="ctrl"><input id="d3" placeholder="请输入"></div></div>
+</fieldset>
+<fieldset><legend>教育经历</legend>
+  <div class="line"><div class="label">学校名称</div><div class="ctrl"><input id="d4" placeholder="请输入"></div></div>
+</fieldset>
+<table><tr><td class="label">民族</td><td><input id="e1" placeholder="请输入"></td></tr>
+<tr><td class="label">籍贯</td><td><input id="e2" placeholder="请输入"></td></tr></table>
+<div class="line"><div class="ctrl"><input id="f1" placeholder="请输入"></div></div>
+<div class="line"><div class="ctrl"><input id="f2" placeholder="请输入验证码"></div></div>
+<div class="line"><div class="label">英语水平</div><div class="ctrl"><select id="g1"><option value=""></option><option>英语四级</option><option>英语六级</option><option>英语专业八级</option></select></div></div>
+<div class="line"><div class="label">政治面貌</div><div class="ctrl"><select id="g2"><option value=""></option><option>中共党员</option><option>中共党员（含预备）</option><option>共青团员</option></select></div></div>
+
+<script>document.documentElement.dataset.wsaHostId = '__wsa_harness_host__';<\/script>
+<script src="../concepts.js"><\/script>
+<script src="harness.js"><\/script>
+</body></html>`;
+fr.srcdoc = HARNESS_DOC;
+fr.addEventListener('load', () => {
+  window.__shellReady = true;
+  document.getElementById('info').textContent = '隔离 harness 已装配（iframe 内为 about:blank 文档，扩展不会注入）';
+});
+</script>
+</body>
+</html>
