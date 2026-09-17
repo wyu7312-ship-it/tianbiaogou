@@ -74,6 +74,28 @@
 - 备份 JSON（导入导出用）**含个人信息**，请只存进本地 `private/`（已被 `.gitignore` 保护），切勿提交、上传或转发。
 - 提示：Chrome 自带的地址自动填充是**另一条独立通道**，与本扩展无关；若你用了浏览器保存的地址，那是 Chrome 在管理，不经过本项目代码。
 
+## 权限说明（为什么它"能读所有网站"）
+
+安装时 Chrome 会提示"读取和更改您在访问的网站上的所有数据"，这是因为 `manifest.json` 里的：
+
+```json
+"permissions": ["storage"],
+"content_scripts": [{ "matches": ["http://*/*", "https://*/*"], ... }]
+```
+
+- **`storage`**：唯一申请的能力，用于把字典存进本机 `chrome.storage.local`。
+- **`matches` 全站匹配**：网申系统遍布各家域名（国聘/南方电网/中粮/各大招聘站…），
+  没法预先枚举，只能全站注入才能在你点输入框时弹卡片。**这是本扩展唯一的"重权限"，也是最需要被审视的一条。**
+- **它没有的**：没有 `host_permissions`、没有 `tabs`/`cookies`/`webRequest`、没有 `<all_urls>` 之外的网络能力；
+  源码里**没有 `fetch`/`XMLHttpRequest`/`WebSocket`/`sendBeacon`/`EventSource`**，
+  也**没有 `chrome.storage.sync`**（`sync` 会把数据上传 Google 云端，本项目只用 `local`）。
+- **你可以自己验**：`chrome://extensions` → 详情 → 看权限一栏；
+  或在任意网页按 `F12` → Network → 筛选 Fetch/XHR，然后点输入框、点候选填入——**应该零请求**。
+  仓库里 `tests/unit.html` 的 T7 断言会持续扫描源码守住这条（命中即测试失败）。
+
+> 若你不放心全站注入，可以在 `manifest.json` 里把 `matches` 收窄成白名单
+> （例如只留你实际投递的那几个站），代价是别的站不再支持。
+
 ## 自测
 
 ```bash
