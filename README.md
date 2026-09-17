@@ -1,5 +1,9 @@
 # 网申填充助手 · WSA Autofill
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-blue.svg)](manifest.json)
+[![zero network](https://img.shields.io/badge/network-none-brightgreen.svg)](#隐私声明)
+
 > 点一下输入框，弹出你存过的信息，点一下就填进**这一个**框。纯本地、零联网的 Chrome 填表助手。
 
 秋招 / 考公报名 / 各种网申系统，同一份简历要重复填几十遍，而且**每个网站的字段叫法都不一样**（手机号 / 手机号码 / 移动号码 / Contact Number…），多人信息还容易串（本人姓名、母亲姓名、紧急联系人…）。这个扩展就是来解决这三件事的。
@@ -136,6 +140,12 @@ python tools/cdp_file.py --file tools/probe/shell.js --url "http://localhost:877
 
 ## 许可 / 说明
 
-个人工具，欢迎参考。详见 [`CHANGELOG.md`](CHANGELOG.md)；协作与隐私红线见 [`AGENTS.md`](AGENTS.md)。
+[MIT](LICENSE) © 2026 wsa-autofill contributors —— 可自由使用、修改、分发（保留版权声明即可）。
+
+> 授权范围只覆盖**本仓库代码**。你通过本扩展填入任何网站的信息、以及你存在
+> `chrome.storage.local` 里的字典内容，都归你自己，与本项目无关；作者不对填写结果、
+> 投递后果或数据丢失承担任何责任（软件按"原样"提供）。
+
+详见 [`CHANGELOG.md`](CHANGELOG.md)；协作与隐私红线见 [`AGENTS.md`](AGENTS.md)。
 
 <!-- TODO截图: 演示 GIF（务必先打码，遵循 AGENTS.md §一：只出现假名） -->
