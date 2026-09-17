@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "网申填充助手",
+  "name": "填表狗",
   "version": "0.4.0",
-  "description": "点击输入框弹出已存信息，点选填入当前框；数据仅存本地，不联网。",
+  "description": "点输入框弹出你存过的值，点一下填进这一个框。数据只存本机，代码不联网。",
   "permissions": ["storage"],
   "background": { "service_worker": "background.js" },
   "options_page": "options.html",

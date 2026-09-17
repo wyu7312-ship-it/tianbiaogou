@@ -1,4 +1,4 @@
-// 网申填充助手 · 纯逻辑层（无 DOM；tests/unit.html 直接加载测试）
+﻿// 填表狗 · 纯逻辑层（无 DOM；tests/unit.html 直接加载测试）
 (() => {
   'use strict';
   function norm(s) { return String(s || '').toLowerCase().replace(/[\s:：*＊()（)）\[\]【】"'、.,，/·-]/g, ''); }

@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>wsa unit tests</title></head>
 <body>
 <script src="../concepts.js"></script>
 <script src="../matcher.js"></script>
 <script>
-// 网申填充助手 · 纯逻辑层断言套件（不依赖扩展加载，改代码刷新即测）
+// 填表狗 · 纯逻辑层断言套件（不依赖扩展加载，改代码刷新即测）
 const R = { pass: 0, fail: 0, messages: [] };
 function ok(name, cond) { if (cond) R.pass++; else { R.fail++; R.messages.push(name); } }
 function block(name, fn) { try { fn(); } catch (e) { R.fail++; R.messages.push(name + ' 抛错: ' + String(e && e.message || e).slice(0, 90)); } }

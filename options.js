@@ -1,4 +1,4 @@
-// 网申填充助手 · 字典管理（存储 v2：按概念归位；零联网——本页及所加载脚本无任何外发通道）
+﻿// 填表狗 · 字典管理（存储 v2：按概念归位；零联网——本页及所加载脚本无任何外发通道）
 let dict = null;      // {version:2, concepts:{id:{userAliases:[],options:[{value,tag}]}}, custom:[{label,aliases,options}]}
 let showEmpty = false;
 

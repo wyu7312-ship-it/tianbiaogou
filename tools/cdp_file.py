@@ -14,6 +14,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--file", required=True)
 ap.add_argument("--url")
 ap.add_argument("--match")
+ap.add_argument("--port", type=int, help="强制调试端口（活浏览器可能不在默认 9222/9223）")
 ap.add_argument("--wait", type=float, default=1.5)
 ap.add_argument("--read-timeout", type=float, default=30)
 ap.add_argument("--no-close", action="store_true")
@@ -23,6 +24,8 @@ here = os.path.dirname(os.path.abspath(__file__))
 expr = open(a.file, encoding="utf-8").read()
 cmd = [sys.executable, os.path.join(here, "cdp_eval.py"), "--expr", expr,
        "--wait", str(a.wait), "--read-timeout", str(a.read_timeout)]
+if a.port:
+    cmd += ["--port", str(a.port)]
 if a.url:
     cmd += ["--url", a.url]
 if a.match:

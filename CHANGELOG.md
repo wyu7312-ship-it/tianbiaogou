@@ -5,6 +5,12 @@
 
 ## v0.4 — 2026-09
 
+### 变更（改名）
+- **项目名 `网申填充助手` → `填表狗`**（仓库同步改名 `wsa-autofill` → `tianbiaogou`，GitHub 会自动重定向旧地址）。
+  扩展显示名（`manifest.json` 的 `name`）、选项页标题、各源码文件头注释一并更新。
+- README 重写：开头讲清楚"为什么有这东西"（毕业狗秋招填表填到麻），
+  正文按"怎么做的"分五节讲实现思路（点选只填当前框 / 概念表归位 / 人称 scope / 记住兜底 / 零联网）。
+
 ### 修复（标签识别 —— 卡片标题取不到真标签）
 - **旁支兄弟含 select/hidden 被误杀**：跳过条件原本是递归的 `querySelector('input,textarea,select')`，
   导致 `<div class="label">所学专业<select>…</select></div>` 这种"专业/学校用下拉选"的主流形态
